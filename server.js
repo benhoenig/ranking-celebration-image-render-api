@@ -3,6 +3,8 @@ import { createCanvas, loadImage, registerFont } from "canvas";
 import path from "path";
 import fetch from "node-fetch";
 import fs from "fs/promises";
+import crypto from "crypto";
+import { fileURLToPath } from "url";
 
 const app = express();
 
@@ -15,6 +17,23 @@ try {
   console.warn("Warning: failed to register font at", fontPath, e?.message || e);
 }
 app.use(express.json());
+
+// Determine __dirname in ESM and ensure a public directory exists
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const publicDir = path.join(__dirname, "public");
+try {
+  await fs.mkdir(publicDir, { recursive: true });
+} catch (e) {
+  console.warn("Warning: unable to create public directory:", e?.message || e);
+}
+
+// Serve static images from /i
+app.use(
+  "/i",
+  express.static(publicDir, {
+    maxAge: "7d",
+  })
+);
 
 // Load template JSON at startup
 const templatePath = path.join(process.cwd(), "templates", "template.json");
@@ -52,7 +71,7 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-app.post("/generate-image", async (req, res) => {
+app.post("/render", async (req, res) => {
   try {
     // Load background from template, fallback to assets/background.png
     let bgImage = null;
@@ -149,10 +168,23 @@ app.post("/generate-image", async (req, res) => {
       }
     }
 
-    // Save and send image
+    // Save the PNG to disk in public/ with a unique filename, then return JSON URL
     const buffer = canvas.toBuffer("image/png");
-    res.set("Content-Type", "image/png");
-    res.send(buffer);
+
+    const id = crypto.randomUUID();
+    const filename = `${id}.png`;
+    const filePath = path.join(publicDir, filename);
+
+    try {
+      await fs.writeFile(filePath, buffer);
+    } catch (writeErr) {
+      console.error("Failed to write PNG to disk:", writeErr);
+      return res.status(500).json({ error: "Failed to save image" });
+    }
+
+    const url = `https://ranking-celebration-image-render-api.onrender.com/i/${filename}`;
+    console.log("Generated image:", url);
+    return res.json({ url });
 
   } catch (err) {
     console.error(err);
