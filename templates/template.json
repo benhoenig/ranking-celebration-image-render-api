@@ -4,14 +4,14 @@
       {
         "type": "image",
         "name": "avatar",
-        "x": 384,
+        "x": 250,
         "y": 260,
         "width": 400,
         "height": 400,
         "clip": "circle",
         "border": {
           "width": 20,
-          "color": "{{ border_color }}"
+          "color": "{{ color_code }}"
         },
         "source": "{{ avatar_url }}"
       },
@@ -19,9 +19,9 @@
         "type": "text",
         "name": "sales_name",
         "text": "{{ sales_name }}",
-        "x": 384,
+        "x": 450,
         "y": 720,
-        "font": "Sarabun",
+        "font": "DB-Adman-X",
         "fontSize": 42,
         "color": "#000000",
         "align": "center"
@@ -29,24 +29,23 @@
       {
         "type": "rectangle",
         "name": "rank_badge",
-        "x": 384,
+        "x": 200,
         "y": 780,
         "width": 500,
         "height": 60,
         "radius": 10,
-        "color": "{{ badge_color }}"
+        "color": "{{ color_code }}"
       },
       {
         "type": "text",
         "name": "rank_name",
         "text": "{{ rank_name }}",
-        "x": 384,
+        "x": 450,
         "y": 810,
-        "font": "Sarabun",
+        "font": "DB-Adman-X",
         "fontSize": 28,
         "color": "#FFFFFF",
         "align": "center"
       }
     ]
   }
-  

@@ -8,11 +8,11 @@ import { fileURLToPath } from "url";
 
 const app = express();
 
-// Register custom font (DB-Admin-X)
+// Register custom font (DB-Adman-X)
 const assetsDir = path.join(process.cwd(), "assets");
 const fontPath = path.join(assetsDir, "DB-Adman-X.ttf");
 try {
-  registerFont(fontPath, { family: "DB-Admin-X" });
+  registerFont(fontPath, { family: "DB-Adman-X" });
 } catch (e) {
   console.warn("Warning: failed to register font at", fontPath, e?.message || e);
 }
@@ -179,12 +179,14 @@ app.post("/render", async (req, res) => {
           const color = resolvePlaceholders(element.color ?? "#000000", req.body);
           const text = resolvePlaceholders(element.text ?? "", req.body);
           const align = (element.align || "left").toLowerCase();
+          const fontFamilyRaw = element.font || "DB-Adman-X";
+          const fontFamily = resolvePlaceholders(fontFamilyRaw, req.body) || "DB-Adman-X";
 
-          ctx.font = `${fontSize}px DB-Admin-X`;
+          ctx.font = `${fontSize}px ${fontFamily}`;
           ctx.fillStyle = color;
           ctx.textAlign = ["left", "right", "center"].includes(align) ? align : "left";
           ctx.fillText(text, x, y);
-          log("element:text drawn", { name, x, y, fontSize, color, align });
+          log("element:text drawn", { name, x, y, fontSize, color, align, fontFamily });
         }
       }
     }
