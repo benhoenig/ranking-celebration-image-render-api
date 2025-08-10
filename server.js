@@ -73,6 +73,11 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 
 app.post("/render", async (req, res) => {
   try {
+    const requestId = crypto.randomUUID();
+    const log = (...args) => console.log(`[${requestId}]`, ...args);
+    const logWarn = (...args) => console.warn(`[${requestId}]`, ...args);
+    const logError = (...args) => console.error(`[${requestId}]`, ...args);
+    log("start /render");
     // Load background from template, fallback to assets/background.png
     let bgImage = null;
     if (templateDefinition?.background) {
@@ -81,14 +86,18 @@ app.post("/render", async (req, res) => {
         ? bgTemplatePath
         : path.join(process.cwd(), bgTemplatePath);
       try {
+        log("load-background: template path", resolvedBgPath);
         bgImage = await loadImage(resolvedBgPath);
+        log("load-background: template path ok");
       } catch (e) {
-        console.warn("Failed to load background from template path, falling back to assets/background.png:", e?.message || e);
+        logWarn("load-background: template path failed, falling back to assets/background.png", e?.message || e);
       }
     }
     if (!bgImage) {
       const fallbackBg = path.join(assetsDir, "background.png");
+      log("load-background: fallback path", fallbackBg);
       bgImage = await loadImage(fallbackBg);
+      log("load-background: fallback ok");
     }
 
     const width = bgImage.width || 1080;
@@ -104,6 +113,7 @@ app.post("/render", async (req, res) => {
       for (const element of templateDefinition.elements) {
         const type = element.type;
         if (type === "image") {
+          const name = element.name || "image";
           const x = element.x ?? 0;
           const y = element.y ?? 0;
           const w = element.width ?? 0;
@@ -117,13 +127,19 @@ app.post("/render", async (req, res) => {
 
           let imageObj = null;
           if (source.startsWith("http://") || source.startsWith("https://")) {
+            log("element:image fetch", { name, url: source });
             const resp = await fetch(source);
-            if (!resp.ok) throw new Error(`Failed to fetch image: ${resp.status}`);
+            if (!resp.ok) {
+              throw new Error(`Failed to fetch image (${name}): ${resp.status}`);
+            }
             const buf = Buffer.from(await resp.arrayBuffer());
             imageObj = await loadImage(buf);
+            log("element:image load ok", { name });
           } else {
             const localPath = path.isAbsolute(source) ? source : path.join(process.cwd(), source);
+            log("element:image load local", { name, path: localPath });
             imageObj = await loadImage(localPath);
+            log("element:image load ok", { name });
           }
 
           if (hasCircleClip && border && border.width && border.color) {
@@ -142,7 +158,9 @@ app.post("/render", async (req, res) => {
           }
           ctx.drawImage(imageObj, x, y, w, h);
           ctx.restore();
+          log("element:image drawn", { name, x, y, w, h });
         } else if (type === "rectangle") {
+          const name = element.name || "rectangle";
           const x = element.x ?? 0;
           const y = element.y ?? 0;
           const w = element.width ?? 0;
@@ -152,7 +170,9 @@ app.post("/render", async (req, res) => {
           drawRoundedRect(ctx, x, y, w, h, radius);
           ctx.fillStyle = color;
           ctx.fill();
+          log("element:rectangle drawn", { name, x, y, w, h, radius, color });
         } else if (type === "text") {
+          const name = element.name || "text";
           const x = element.x ?? 0;
           const y = element.y ?? 0;
           const fontSize = element.fontSize ?? 24;
@@ -164,6 +184,7 @@ app.post("/render", async (req, res) => {
           ctx.fillStyle = color;
           ctx.textAlign = ["left", "right", "center"].includes(align) ? align : "left";
           ctx.fillText(text, x, y);
+          log("element:text drawn", { name, x, y, fontSize, color, align });
         }
       }
     }
@@ -176,18 +197,20 @@ app.post("/render", async (req, res) => {
     const filePath = path.join(publicDir, filename);
 
     try {
+      log("save-file", { path: filePath });
       await fs.writeFile(filePath, buffer);
+      log("save-file ok", { path: filePath });
     } catch (writeErr) {
-      console.error("Failed to write PNG to disk:", writeErr);
+      logError("save-file failed", writeErr);
       return res.status(500).json({ error: "Failed to save image" });
     }
 
     const url = `https://ranking-celebration-image-render-api.onrender.com/i/${filename}`;
-    console.log("Generated image:", url);
+    log("done", { url });
     return res.json({ url });
 
   } catch (err) {
-    console.error(err);
+    console.error("[unhandled]", err);
     res.status(500).send({ error: "Image generation failed" });
   }
 });
