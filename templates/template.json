@@ -11,7 +11,7 @@
         "clip": "circle",
         "border": {
           "width": 20,
-          "color": "{{ color_code }}"
+          "color": "{{ border_color }}"
         },
         "source": "{{ avatar_url }}"
       },
@@ -34,7 +34,7 @@
         "width": 500,
         "height": 60,
         "radius": 10,
-        "color": "{{ color_code }}"
+        "color": "{{ badge_color }}"
       },
       {
         "type": "text",
