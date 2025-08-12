@@ -431,7 +431,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Color</label>
-                            <input type="color" value="${element.color || '#000000'}" onchange="updateElement(${index}, 'color', this.value)">
+                            <input type="color" value="${element.color && element.color.startsWith('#') ? element.color : '#000000'}" onchange="updateElement(${index}, 'color', this.value)">
                         </div>
                         <div class="form-group">
                             <label>Alignment</label>
@@ -468,7 +468,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Border Color</label>
-                                <input type="color" value="${element.border.color || '#000000'}" onchange="updateElementBorder(${index}, 'color', this.value)">
+                                <input type="color" value="${element.border.color && element.border.color.startsWith('#') ? element.border.color : '#3498db'}" onchange="updateElementBorder(${index}, 'color', this.value)">
                             </div>
                         </div>
                     `;
@@ -494,7 +494,7 @@
                         </div>
                         <div class="form-group">
                             <label>Color</label>
-                            <input type="color" value="${element.color || '#000000'}" onchange="updateElement(${index}, 'color', this.value)">
+                            <input type="color" value="${element.color && element.color.startsWith('#') ? element.color : '#e74c3c'}" onchange="updateElement(${index}, 'color', this.value)">
                         </div>
                     </div>
                 `;
