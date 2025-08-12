@@ -255,11 +255,7 @@ app.post("/preview", async (req, res) => {
       return res.status(500).json({ error: "Failed to save preview image" });
     }
 
-    // Use localhost for local development, production URL for production
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://ranking-celebration-image-render-api.onrender.com' 
-      : `http://localhost:${process.env.PORT || 3000}`;
-    const url = `${baseUrl}/i/${filename}`;
+    const url = `https://ranking-celebration-image-render-api.onrender.com/i/${filename}`;
     log("done", { url });
     return res.json({ url });
 
@@ -410,11 +406,7 @@ app.post("/render", async (req, res) => {
       return res.status(500).json({ error: "Failed to save image" });
     }
 
-    // Use localhost for local development, production URL for production
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://ranking-celebration-image-render-api.onrender.com' 
-      : `http://localhost:${process.env.PORT || 3000}`;
-    const url = `${baseUrl}/i/${filename}`;
+    const url = `https://ranking-celebration-image-render-api.onrender.com/i/${filename}`;
     log("done", { url });
     return res.json({ url });
 
