@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const adminHtmlPath = path.join(__dirname, "../admin.html");
+    const adminHtmlPath = path.join(process.cwd(), "admin.html");
     const htmlContent = await fs.readFile(adminHtmlPath, "utf8");
     
     res.setHeader('Content-Type', 'text/html');

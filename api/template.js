@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Load template JSON
-const templatePath = path.join(__dirname, "../templates", "template.json");
+const templatePath = path.join(process.cwd(), "templates", "template.json");
 let templateDefinition = null;
 
 async function loadTemplateDefinition() {

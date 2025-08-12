@@ -8,16 +8,18 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Register custom font (DB-Adman-X)
-const assetsDir = path.join(__dirname, "../assets");
+const assetsDir = path.join(process.cwd(), "assets");
 const fontPath = path.join(assetsDir, "DB-Adman-X.ttf");
 try {
   registerFont(fontPath, { family: "DB-Adman-X" });
+  console.log("Font registered successfully:", fontPath);
 } catch (e) {
   console.warn("Warning: failed to register font at", fontPath, e?.message || e);
+  // Continue without custom font - will fall back to system fonts
 }
 
 // Load template JSON
-const templatePath = path.join(__dirname, "../templates", "template.json");
+const templatePath = path.join(process.cwd(), "templates", "template.json");
 let templateDefinition = null;
 async function loadTemplateDefinition() {
   try {
@@ -100,8 +102,18 @@ export default async function handler(req, res) {
     if (!bgImage) {
       const fallbackBg = path.join(assetsDir, "background.png");
       log("load-background: fallback path", fallbackBg);
-      bgImage = await loadImage(fallbackBg);
-      log("load-background: fallback ok");
+      try {
+        bgImage = await loadImage(fallbackBg);
+        log("load-background: fallback ok");
+      } catch (bgErr) {
+        console.warn("Background image not found, creating default canvas");
+        // Create a default 1080x1080 white background if image fails
+        const defaultCanvas = createCanvas(1080, 1080);
+        const defaultCtx = defaultCanvas.getContext("2d");
+        defaultCtx.fillStyle = "#ffffff";
+        defaultCtx.fillRect(0, 0, 1080, 1080);
+        bgImage = defaultCanvas;
+      }
     }
 
     const width = bgImage.width || 1080;
