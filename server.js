@@ -71,6 +71,42 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
+// API endpoint to get current template
+app.get("/api/template", (req, res) => {
+  if (!templateDefinition) {
+    return res.status(500).json({ error: "Template not loaded" });
+  }
+  res.json(templateDefinition);
+});
+
+// API endpoint to update template
+app.put("/api/template", async (req, res) => {
+  try {
+    const newTemplate = req.body;
+    
+    // Basic validation
+    if (!newTemplate || !newTemplate.elements || !Array.isArray(newTemplate.elements)) {
+      return res.status(400).json({ error: "Invalid template format" });
+    }
+    
+    // Save to file
+    await fs.writeFile(templatePath, JSON.stringify(newTemplate, null, 2));
+    
+    // Update in-memory template
+    templateDefinition = newTemplate;
+    
+    res.json({ success: true, message: "Template updated successfully" });
+  } catch (err) {
+    console.error("Failed to update template:", err);
+    res.status(500).json({ error: "Failed to update template" });
+  }
+});
+
+// Serve admin page
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "admin.html"));
+});
+
 app.post("/render", async (req, res) => {
   try {
     const requestId = crypto.randomUUID();

@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Editor - Celebration Image API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .editor-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .elements-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .preview-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+        }
+
+        .element-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .element-card:hover {
+            border-color: #3498db;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
+        }
+
+        .element-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .element-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 12px;
+        }
+
+        .element-icon.text { background: #e74c3c; }
+        .element-icon.image { background: #2ecc71; }
+        .element-icon.rectangle { background: #9b59b6; }
+
+        .element-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: #2c3e50;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #34495e;
+            font-size: 0.9em;
+        }
+
+        input[type="number"], input[type="text"], input[type="color"], select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="number"]:focus, input[type="text"]:focus, input[type="color"]:focus, select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .range-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .range-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 500;
+            color: #3498db;
+            padding: 5px 10px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        .preview-section h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sample-data {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .sample-data h4 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .sample-data p {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #27ae60;
+        }
+
+        .notification.error {
+            background: #e74c3c;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .editor-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Template Editor</h1>
+            <p>Customize your celebration image template with ease</p>
+        </div>
+
+        <div class="editor-grid">
+            <div class="elements-panel">
+                <h2 style="margin-bottom: 25px; color: #2c3e50;">Template Elements</h2>
+                <div id="elementsContainer">
+                    <!-- Elements will be loaded here -->
+                </div>
+            </div>
+
+            <div class="preview-panel">
+                <h3>🔍 Preview</h3>
+                <div class="sample-data">
+                    <h4>Sample Data Used:</h4>
+                    <p><strong>Sales Name:</strong> John Smith</p>
+                    <p><strong>Rank Name:</strong> TOP PERFORMER</p>
+                    <p><strong>Avatar:</strong> Sample image</p>
+                    <p><strong>Border Color:</strong> #3498db</p>
+                    <p><strong>Badge Color:</strong> #e74c3c</p>
+                </div>
+                <button class="btn btn-primary" onclick="generatePreview()" id="previewBtn">
+                    📸 Generate Preview
+                </button>
+                <div id="previewContainer" style="margin-top: 20px; text-align: center;">
+                    <!-- Preview image will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-success" onclick="saveTemplate()" id="saveBtn">
+                💾 Save Template
+            </button>
+            <button class="btn btn-secondary" onclick="resetTemplate()">
+                🔄 Reset Changes
+            </button>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        let currentTemplate = null;
+        let originalTemplate = null;
+
+        // Sample data for preview
+        const sampleData = {
+            sales_name: "John Smith",
+            rank_name: "TOP PERFORMER",
+            avatar_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
+            border_color: "#3498db",
+            badge_color: "#e74c3c"
+        };
+
+        async function loadTemplate() {
+            try {
+                const response = await fetch('/api/template');
+                const template = await response.json();
+                currentTemplate = JSON.parse(JSON.stringify(template));
+                originalTemplate = JSON.parse(JSON.stringify(template));
+                renderElements();
+            } catch (error) {
+                showNotification('Failed to load template', 'error');
+                console.error('Error loading template:', error);
+            }
+        }
+
+        function renderElements() {
+            const container = document.getElementById('elementsContainer');
+            container.innerHTML = '';
+
+            currentTemplate.elements.forEach((element, index) => {
+                const elementCard = createElementCard(element, index);
+                container.appendChild(elementCard);
+            });
+        }
+
+        function createElementCard(element, index) {
+            const card = document.createElement('div');
+            card.className = 'element-card';
+            
+            const iconClass = element.type;
+            const iconText = element.type.charAt(0).toUpperCase();
+            
+            card.innerHTML = `
+                <div class="element-header">
+                    <div class="element-icon ${iconClass}">${iconText}</div>
+                    <div class="element-title">${element.name || element.type}</div>
+                </div>
+                <div class="element-properties">
+                    ${generatePropertyInputs(element, index)}
+                </div>
+            `;
+            
+            return card;
+        }
+
+        function generatePropertyInputs(element, index) {
+            let html = '';
+            
+            // Position controls
+            html += `
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>X Position</label>
+                        <input type="number" value="${element.x || 0}" onchange="updateElement(${index}, 'x', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label>Y Position</label>
+                        <input type="number" value="${element.y || 0}" onchange="updateElement(${index}, 'y', this.value)">
+                    </div>
+                </div>
+            `;
+
+            // Type-specific controls
+            if (element.type === 'text') {
+                html += `
+                    <div class="form-group">
+                        <label>Font Size</label>
+                        <div class="range-container">
+                            <input type="range" min="10" max="200" value="${element.fontSize || 24}" 
+                                   onchange="updateElement(${index}, 'fontSize', this.value); this.nextElementSibling.textContent = this.value">
+                            <span class="range-value">${element.fontSize || 24}</span>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Color</label>
+                            <input type="color" value="${element.color || '#000000'}" onchange="updateElement(${index}, 'color', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Alignment</label>
+                            <select onchange="updateElement(${index}, 'align', this.value)">
+                                <option value="left" ${element.align === 'left' ? 'selected' : ''}>Left</option>
+                                <option value="center" ${element.align === 'center' ? 'selected' : ''}>Center</option>
+                                <option value="right" ${element.align === 'right' ? 'selected' : ''}>Right</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (element.type === 'image') {
+                html += `
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Width</label>
+                            <input type="number" value="${element.width || 0}" onchange="updateElement(${index}, 'width', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Height</label>
+                            <input type="number" value="${element.height || 0}" onchange="updateElement(${index}, 'height', this.value)">
+                        </div>
+                    </div>
+                `;
+                
+                if (element.border) {
+                    html += `
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Border Width</label>
+                                <input type="number" value="${element.border.width || 0}" onchange="updateElementBorder(${index}, 'width', this.value)">
+                            </div>
+                            <div class="form-group">
+                                <label>Border Color</label>
+                                <input type="color" value="${element.border.color || '#000000'}" onchange="updateElementBorder(${index}, 'color', this.value)">
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            if (element.type === 'rectangle') {
+                html += `
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Width</label>
+                            <input type="number" value="${element.width || 0}" onchange="updateElement(${index}, 'width', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Height</label>
+                            <input type="number" value="${element.height || 0}" onchange="updateElement(${index}, 'height', this.value)">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Corner Radius</label>
+                            <input type="number" value="${element.radius || 0}" onchange="updateElement(${index}, 'radius', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Color</label>
+                            <input type="color" value="${element.color || '#000000'}" onchange="updateElement(${index}, 'color', this.value)">
+                        </div>
+                    </div>
+                `;
+            }
+
+            return html;
+        }
+
+        function updateElement(index, property, value) {
+            if (property === 'x' || property === 'y' || property === 'width' || property === 'height' || property === 'fontSize' || property === 'radius') {
+                value = parseInt(value) || 0;
+            }
+            currentTemplate.elements[index][property] = value;
+        }
+
+        function updateElementBorder(index, property, value) {
+            if (!currentTemplate.elements[index].border) {
+                currentTemplate.elements[index].border = {};
+            }
+            if (property === 'width') {
+                value = parseInt(value) || 0;
+            }
+            currentTemplate.elements[index].border[property] = value;
+        }
+
+        async function saveTemplate() {
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.classList.add('loading');
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/api/template', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(currentTemplate)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    originalTemplate = JSON.parse(JSON.stringify(currentTemplate));
+                    showNotification('Template saved successfully!', 'success');
+                } else {
+                    showNotification(result.error || 'Failed to save template', 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to save template', 'error');
+                console.error('Error saving template:', error);
+            }
+
+            saveBtn.classList.remove('loading');
+            saveBtn.textContent = '💾 Save Template';
+        }
+
+        async function generatePreview() {
+            const previewBtn = document.getElementById('previewBtn');
+            const previewContainer = document.getElementById('previewContainer');
+            
+            previewBtn.classList.add('loading');
+            previewBtn.textContent = 'Generating...';
+
+            try {
+                const response = await fetch('/render', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(sampleData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    previewContainer.innerHTML = `
+                        <img src="${result.url}" alt="Preview" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                    `;
+                    showNotification('Preview generated!', 'success');
+                } else {
+                    showNotification('Failed to generate preview', 'error');
+                    previewContainer.innerHTML = '<p style="color: #e74c3c;">Failed to generate preview</p>';
+                }
+            } catch (error) {
+                showNotification('Failed to generate preview', 'error');
+                previewContainer.innerHTML = '<p style="color: #e74c3c;">Failed to generate preview</p>';
+                console.error('Error generating preview:', error);
+            }
+
+            previewBtn.classList.remove('loading');
+            previewBtn.textContent = '📸 Generate Preview';
+        }
+
+        function resetTemplate() {
+            if (confirm('Are you sure you want to reset all changes?')) {
+                currentTemplate = JSON.parse(JSON.stringify(originalTemplate));
+                renderElements();
+                showNotification('Template reset to original state', 'success');
+            }
+        }
+
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Load template on page load
+        window.addEventListener('DOMContentLoaded', loadTemplate);
+    </script>
+</body>
+</html>
