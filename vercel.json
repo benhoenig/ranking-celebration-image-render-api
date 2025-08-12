@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/admin",
+      "dest": "/api/admin.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/$1.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
