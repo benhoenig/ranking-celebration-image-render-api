@@ -1,5 +1,13 @@
 {
   "version": 2,
+  "functions": {
+    "api/preview.js": {
+      "maxDuration": 30
+    },
+    "api/render.js": {
+      "maxDuration": 30
+    }
+  },
   "routes": [
     {
       "src": "/admin",
