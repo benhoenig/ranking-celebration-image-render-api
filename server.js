@@ -107,6 +107,168 @@ app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
 });
 
+// Preview endpoint that accepts custom template without saving
+app.post("/preview", async (req, res) => {
+  try {
+    const { template, data } = req.body;
+    
+    if (!template || !data) {
+      return res.status(400).json({ error: "Both template and data are required" });
+    }
+    
+    const requestId = crypto.randomUUID();
+    const log = (...args) => console.log(`[${requestId}-preview]`, ...args);
+    const logWarn = (...args) => console.warn(`[${requestId}-preview]`, ...args);
+    const logError = (...args) => console.error(`[${requestId}-preview]`, ...args);
+    
+    log("start /preview");
+    
+    // Use provided template instead of templateDefinition
+    const customTemplate = template;
+    
+    // Load background from custom template, fallback to assets/background.png
+    let bgImage = null;
+    if (customTemplate?.background) {
+      const bgTemplatePath = resolvePlaceholders(customTemplate.background, data);
+      const resolvedBgPath = path.isAbsolute(bgTemplatePath)
+        ? bgTemplatePath
+        : path.join(process.cwd(), bgTemplatePath);
+      try {
+        log("load-background: template path", resolvedBgPath);
+        bgImage = await loadImage(resolvedBgPath);
+        log("load-background: template path ok");
+      } catch (e) {
+        logWarn("load-background: template path failed, falling back to assets/background.png", e?.message || e);
+      }
+    }
+    if (!bgImage) {
+      const fallbackBg = path.join(assetsDir, "background.png");
+      log("load-background: fallback path", fallbackBg);
+      bgImage = await loadImage(fallbackBg);
+      log("load-background: fallback ok");
+    }
+
+    const width = bgImage.width || 1080;
+    const height = bgImage.height || 1080;
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext("2d");
+
+    // Draw background full-size
+    ctx.drawImage(bgImage, 0, 0, width, height);
+
+    // Render elements from custom template
+    if (customTemplate?.elements?.length) {
+      for (const element of customTemplate.elements) {
+        const type = element.type;
+        if (type === "image") {
+          const name = element.name || "image";
+          const x = element.x ?? 0;
+          const y = element.y ?? 0;
+          const w = element.width ?? 0;
+          const h = element.height ?? 0;
+          const sourceRaw = element.source ?? "";
+          const source = resolvePlaceholders(sourceRaw, data);
+
+          // Optional border for circular clip
+          const border = element.border || null;
+          const hasCircleClip = element.clip === "circle";
+
+          let imageObj = null;
+          if (source.startsWith("http://") || source.startsWith("https://")) {
+            log("element:image fetch", { name, url: source });
+            const resp = await fetch(source);
+            if (!resp.ok) {
+              throw new Error(`Failed to fetch image (${name}): ${resp.status}`);
+            }
+            const buf = Buffer.from(await resp.arrayBuffer());
+            imageObj = await loadImage(buf);
+            log("element:image load ok", { name });
+          } else {
+            const localPath = path.isAbsolute(source) ? source : path.join(process.cwd(), source);
+            log("element:image load local", { name, path: localPath });
+            imageObj = await loadImage(localPath);
+            log("element:image load ok", { name });
+          }
+
+          if (hasCircleClip && border && border.width && border.color) {
+            ctx.beginPath();
+            ctx.arc(x + w / 2, y + h / 2, Math.min(w, h) / 2 + border.width / 2, 0, Math.PI * 2);
+            ctx.fillStyle = resolvePlaceholders(border.color, data) || "#000000";
+            ctx.fill();
+          }
+
+          ctx.save();
+          if (hasCircleClip) {
+            ctx.beginPath();
+            ctx.arc(x + w / 2, y + h / 2, Math.min(w, h) / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+          }
+          ctx.drawImage(imageObj, x, y, w, h);
+          ctx.restore();
+          log("element:image drawn", { name, x, y, w, h });
+        } else if (type === "rectangle") {
+          const name = element.name || "rectangle";
+          const x = element.x ?? 0;
+          const y = element.y ?? 0;
+          const w = element.width ?? 0;
+          const h = element.height ?? 0;
+          const radius = element.radius ?? 0;
+          const color = resolvePlaceholders(element.color ?? "#000000", data);
+          drawRoundedRect(ctx, x, y, w, h, radius);
+          ctx.fillStyle = color;
+          ctx.fill();
+          log("element:rectangle drawn", { name, x, y, w, h, radius, color });
+        } else if (type === "text") {
+          const name = element.name || "text";
+          const x = element.x ?? 0;
+          const y = element.y ?? 0;
+          const fontSize = element.fontSize ?? 24;
+          const color = resolvePlaceholders(element.color ?? "#000000", data);
+          const text = resolvePlaceholders(element.text ?? "", data);
+          const align = (element.align || "left").toLowerCase();
+          const fontFamilyRaw = element.font || "DB-Adman-X";
+          const fontFamily = resolvePlaceholders(fontFamilyRaw, data) || "DB-Adman-X";
+
+          ctx.font = `${fontSize}px ${fontFamily}`;
+          ctx.fillStyle = color;
+          ctx.textAlign = ["left", "right", "center"].includes(align) ? align : "left";
+          ctx.fillText(text, x, y);
+          log("element:text drawn", { name, x, y, fontSize, color, align, fontFamily });
+        }
+      }
+    }
+
+    // Save the PNG to disk in public/ with a unique filename, then return JSON URL
+    const buffer = canvas.toBuffer("image/png");
+
+    const id = crypto.randomUUID();
+    const filename = `preview-${id}.png`;
+    const filePath = path.join(publicDir, filename);
+
+    try {
+      log("save-file", { path: filePath });
+      await fs.writeFile(filePath, buffer);
+      log("save-file ok", { path: filePath });
+    } catch (writeErr) {
+      logError("save-file failed", writeErr);
+      return res.status(500).json({ error: "Failed to save preview image" });
+    }
+
+    // Use localhost for local development, production URL for production
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://ranking-celebration-image-render-api.onrender.com' 
+      : `http://localhost:${process.env.PORT || 3000}`;
+    const url = `${baseUrl}/i/${filename}`;
+    log("done", { url });
+    return res.json({ url });
+
+  } catch (err) {
+    console.error("[preview-unhandled]", err);
+    res.status(500).send({ error: "Preview generation failed" });
+  }
+});
+
 app.post("/render", async (req, res) => {
   try {
     const requestId = crypto.randomUUID();
@@ -202,7 +364,9 @@ app.post("/render", async (req, res) => {
           const w = element.width ?? 0;
           const h = element.height ?? 0;
           const radius = element.radius ?? 0;
-          const color = resolvePlaceholders(element.color ?? "#000000", req.body);
+          const colorTemplate = element.color ?? "#000000";
+          const color = resolvePlaceholders(colorTemplate, req.body);
+          log("element:rectangle color resolution", { name, template: colorTemplate, resolved: color, data: req.body });
           drawRoundedRect(ctx, x, y, w, h, radius);
           ctx.fillStyle = color;
           ctx.fill();
@@ -212,12 +376,15 @@ app.post("/render", async (req, res) => {
           const x = element.x ?? 0;
           const y = element.y ?? 0;
           const fontSize = element.fontSize ?? 24;
-          const color = resolvePlaceholders(element.color ?? "#000000", req.body);
-          const text = resolvePlaceholders(element.text ?? "", req.body);
+          const colorTemplate = element.color ?? "#000000";
+          const color = resolvePlaceholders(colorTemplate, req.body);
+          const textTemplate = element.text ?? "";
+          const text = resolvePlaceholders(textTemplate, req.body);
           const align = (element.align || "left").toLowerCase();
           const fontFamilyRaw = element.font || "DB-Adman-X";
           const fontFamily = resolvePlaceholders(fontFamilyRaw, req.body) || "DB-Adman-X";
 
+          log("element:text details", { name, fontSize, colorTemplate, color, textTemplate, text, fontFamily });
           ctx.font = `${fontSize}px ${fontFamily}`;
           ctx.fillStyle = color;
           ctx.textAlign = ["left", "right", "center"].includes(align) ? align : "left";
@@ -243,7 +410,11 @@ app.post("/render", async (req, res) => {
       return res.status(500).json({ error: "Failed to save image" });
     }
 
-    const url = `https://ranking-celebration-image-render-api.onrender.com/i/${filename}`;
+    // Use localhost for local development, production URL for production
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://ranking-celebration-image-render-api.onrender.com' 
+      : `http://localhost:${process.env.PORT || 3000}`;
+    const url = `${baseUrl}/i/${filename}`;
     log("done", { url });
     return res.json({ url });
 
