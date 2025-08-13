@@ -11,10 +11,17 @@ const app = express();
 // Register custom font (DB-Adman-X)
 const assetsDir = path.join(process.cwd(), "assets");
 const fontPath = path.join(assetsDir, "DB-Adman-X.ttf");
+console.log("🔤 FONT DEBUG: Attempting to register font at:", fontPath);
+console.log("🔤 FONT DEBUG: Assets dir:", assetsDir);
+console.log("🔤 FONT DEBUG: Working directory:", process.cwd());
+
 try {
   registerFont(fontPath, { family: "DB-Adman-X" });
+  console.log("✅ FONT SUCCESS: Font registered successfully at", fontPath);
 } catch (e) {
-  console.warn("Warning: failed to register font at", fontPath, e?.message || e);
+  console.error("❌ FONT FAILED: Failed to register font at", fontPath);
+  console.error("❌ FONT ERROR:", e?.message || e);
+  console.error("❌ FONT STACK:", e?.stack);
 }
 app.use(express.json());
 
@@ -478,9 +485,18 @@ app.post("/render", async (req, res) => {
           const fontFamily = resolvePlaceholders(fontFamilyRaw, req.body) || "DB-Adman-X";
 
           log("element:text details", { name, fontSize, colorTemplate, color, textTemplate, text, fontFamily });
-          ctx.font = `${fontSize}px ${fontFamily}`;
+          
+          // Debug font setting
+          const fontString = `${fontSize}px ${fontFamily}`;
+          log("element:text font setting", { fontString, before: ctx.font });
+          ctx.font = fontString;
+          log("element:text font after setting", { fontString, after: ctx.font });
+          
           ctx.fillStyle = color;
           ctx.textAlign = ["left", "right", "center"].includes(align) ? align : "left";
+          
+          // Debug text rendering
+          log("element:text about to draw", { text, x, y, fontSize, color, fontFamily, actualFont: ctx.font, actualFillStyle: ctx.fillStyle });
           ctx.fillText(text, x, y);
           log("element:text drawn", { name, x, y, fontSize, color, align, fontFamily });
         }
