@@ -535,11 +535,24 @@ app.post("/render", async (req, res) => {
 
           log("element:text details", { name, fontSize, colorTemplate, color, textTemplate, text, fontFamily });
           
-          // Debug font setting
-          const fontString = `${fontSize}px ${fontFamily}`;
+          // Debug font setting with explicit fallback
+          const fontString = `${fontSize}px "${fontFamily}", Arial, sans-serif`;
           log("element:text font setting", { fontString, before: ctx.font });
           ctx.font = fontString;
           log("element:text font after setting", { fontString, after: ctx.font });
+          
+          // Test if font is actually working by measuring test character
+          const testMetrics = ctx.measureText("M");
+          const expectedHeight = fontSize * 0.7; // Rough estimate for font height
+          const actualWorking = testMetrics.actualBoundingBoxAscent > expectedHeight * 0.5;
+          log("element:text font validation", { 
+            fontSize, 
+            testChar: "M", 
+            expectedHeight, 
+            actualHeight: testMetrics.actualBoundingBoxAscent,
+            fontWorking: actualWorking,
+            fontFamily 
+          });
           
           ctx.fillStyle = color;
           ctx.textAlign = ["left", "right", "center"].includes(align) ? align : "left";
