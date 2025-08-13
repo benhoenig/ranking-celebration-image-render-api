@@ -211,6 +211,49 @@ app.post("/debug-placeholders", (req, res) => {
   }
 });
 
+// Debug endpoint: Test Font Rendering
+app.get("/debug-font", async (req, res) => {
+  try {
+    const canvas = createCanvas(400, 200);
+    const ctx = canvas.getContext("2d");
+    
+    // Test both fonts
+    const tests = [
+      { font: "60px DB-Adman-X", text: "Custom Font Test", y: 80 },
+      { font: "40px Arial", text: "Arial Fallback Test", y: 140 }
+    ];
+    
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, 400, 200);
+    
+    const results = [];
+    tests.forEach((test, i) => {
+      ctx.font = test.font;
+      ctx.fillStyle = "#000000";
+      ctx.fillText(test.text, 20, test.y);
+      
+      results.push({
+        requested: test.font,
+        actual: ctx.font,
+        text: test.text,
+        fontMatches: ctx.font === test.font
+      });
+    });
+    
+    const buffer = canvas.toBuffer("image/png");
+    const base64Image = buffer.toString('base64');
+    
+    return res.json({
+      fontTests: results,
+      image: `data:image/png;base64,${base64Image}`,
+      fontRegistrationPath: fontPath,
+      assetsDir: assetsDir
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "Font debug failed", message: error.message });
+  }
+});
+
 // Preview endpoint that accepts custom template without saving
 app.post("/preview", async (req, res) => {
   try {
