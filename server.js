@@ -449,6 +449,18 @@ app.post("/render", async (req, res) => {
     // CRITICAL: Log canvas dimensions and coordinates
     log("canvas-setup", { width, height, bgWidth: bgImage.width, bgHeight: bgImage.height });
 
+    // CRITICAL: Test if Canvas has scaling issues
+    const testFont = "100px Arial";
+    ctx.font = testFont;
+    const testMeasure = ctx.measureText("TEST");
+    log("canvas-scaling-test", { 
+      requestedFont: testFont, 
+      actualFont: ctx.font,
+      testWidth: testMeasure.width,
+      testHeight: testMeasure.actualBoundingBoxAscent,
+      scalingWorking: testMeasure.actualBoundingBoxAscent > 50 
+    });
+
     // Draw background full-size
     ctx.drawImage(bgImage, 0, 0, width, height);
     
@@ -554,6 +566,20 @@ app.post("/render", async (req, res) => {
             fontFamily 
           });
           
+          // CRITICAL FIX: If font scaling is broken, apply manual scaling
+          if (!actualWorking && testMetrics.actualBoundingBoxAscent < expectedHeight * 0.5) {
+            const scaleFactor = expectedHeight / (testMetrics.actualBoundingBoxAscent || 1);
+            const correctedFontSize = Math.round(fontSize * scaleFactor);
+            const correctedFontString = `${correctedFontSize}px "${fontFamily}", Arial, sans-serif`;
+            ctx.font = correctedFontString;
+            log("element:text SCALING FIX applied", { 
+              originalSize: fontSize, 
+              correctedSize: correctedFontSize, 
+              scaleFactor, 
+              newFont: correctedFontString 
+            });
+          }
+          
           ctx.fillStyle = color;
           ctx.textAlign = ["left", "right", "center"].includes(align) ? align : "left";
           
@@ -578,8 +604,52 @@ app.post("/render", async (req, res) => {
       }
     }
 
+    // CRITICAL: Test canvas buffer export for corruption
+    log("canvas-export-test", { 
+      canvasWidth: canvas.width, 
+      canvasHeight: canvas.height,
+      expectedPixels: canvas.width * canvas.height,
+      canvasType: canvas.constructor.name 
+    });
+
     // Save the PNG to disk in public/ with a unique filename, then return JSON URL
     const buffer = canvas.toBuffer("image/png");
+    
+    // CRITICAL: Analyze buffer for corruption signs
+    const bufferSize = buffer.length;
+    const expectedMinSize = 10000; // 900x900 PNG should be at least 10KB
+    const expectedMaxSize = 5000000; // Should be under 5MB
+    const bufferCorrupted = bufferSize < expectedMinSize || bufferSize > expectedMaxSize;
+    
+    // CRITICAL: Test if canvas pixels are actually rendered correctly
+    const imageData = ctx.getImageData(0, 0, Math.min(canvas.width, 100), Math.min(canvas.height, 100));
+    const pixels = imageData.data;
+    let nonZeroPixels = 0;
+    let coloredPixels = 0;
+    
+    for (let i = 0; i < pixels.length; i += 4) {
+      const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2], a = pixels[i + 3];
+      if (a > 0) nonZeroPixels++;
+      if (r > 50 || g > 50 || b > 50) coloredPixels++; // Non-black pixels
+    }
+    
+    log("canvas-pixel-debug", {
+      sampledPixels: pixels.length / 4,
+      nonZeroPixels,
+      coloredPixels,
+      pixelRatio: coloredPixels / (pixels.length / 4),
+      firstPixelRGBA: [pixels[0], pixels[1], pixels[2], pixels[3]]
+    });
+
+    log("canvas-buffer-debug", {
+      bufferSize,
+      bufferSizeKB: Math.round(bufferSize / 1024),
+      expectedMinSize,
+      expectedMaxSize,
+      bufferCorrupted,
+      bufferStart: buffer.slice(0, 16).toString('hex'), // PNG header
+      bufferValidPNG: buffer.slice(0, 8).toString('hex') === '89504e470d0a1a0a'
+    });
 
     const id = crypto.randomUUID();
     const filename = `${id}.png`;
