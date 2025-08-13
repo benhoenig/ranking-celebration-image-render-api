@@ -446,8 +446,14 @@ app.post("/render", async (req, res) => {
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext("2d");
 
+    // CRITICAL: Log canvas dimensions and coordinates
+    log("canvas-setup", { width, height, bgWidth: bgImage.width, bgHeight: bgImage.height });
+
     // Draw background full-size
     ctx.drawImage(bgImage, 0, 0, width, height);
+    
+    // Log initial canvas state
+    log("canvas-initial-state", { font: ctx.font, fillStyle: ctx.fillStyle, textAlign: ctx.textAlign });
 
     // Render elements from template
     if (templateDefinition?.elements?.length) {
@@ -540,7 +546,20 @@ app.post("/render", async (req, res) => {
           
           // Debug text rendering
           log("element:text about to draw", { text, x, y, fontSize, color, fontFamily, actualFont: ctx.font, actualFillStyle: ctx.fillStyle });
+          
+          // CRITICAL: Test if text actually renders by measuring it
+          const textMetrics = ctx.measureText(text);
+          log("element:text metrics", { text, width: textMetrics.width, actualHeight: textMetrics.actualBoundingBoxAscent });
+          
+          // Save context before drawing
+          const beforeDraw = { font: ctx.font, fillStyle: ctx.fillStyle, textAlign: ctx.textAlign };
+          
           ctx.fillText(text, x, y);
+          
+          // Check if context changed after drawing
+          const afterDraw = { font: ctx.font, fillStyle: ctx.fillStyle, textAlign: ctx.textAlign };
+          log("element:text context check", { beforeDraw, afterDraw, contextChanged: JSON.stringify(beforeDraw) !== JSON.stringify(afterDraw) });
+          
           log("element:text drawn", { name, x, y, fontSize, color, align, fontFamily });
         }
       }
