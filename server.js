@@ -107,6 +107,103 @@ app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
 });
 
+// Debug endpoint: Test Canvas package
+app.get("/debug-canvas", async (req, res) => {
+  try {
+    let canvasStatus = "unknown";
+    let canvasError = null;
+    
+    try {
+      const { createCanvas } = await import("canvas");
+      const canvas = createCanvas(100, 100);
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ff0000";
+      ctx.fillRect(0, 0, 100, 100);
+      const buffer = canvas.toBuffer("image/png");
+      canvasStatus = "working";
+    } catch (error) {
+      canvasStatus = "failed";
+      canvasError = error.message;
+    }
+
+    return res.json({
+      canvas: { status: canvasStatus, error: canvasError },
+      environment: {
+        nodeVersion: process.version,
+        platform: process.platform,
+        arch: process.arch
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "Debug failed", message: error.message });
+  }
+});
+
+// Debug endpoint: Test Assets
+app.get("/debug-assets", async (req, res) => {
+  try {
+    const results = {};
+    const assetsDir = path.join(process.cwd(), "assets");
+    
+    try {
+      const assetsList = await fs.readdir(assetsDir);
+      results.assetsDir = { exists: true, path: assetsDir, files: assetsList };
+    } catch (error) {
+      results.assetsDir = { exists: false, path: assetsDir, error: error.message };
+    }
+    
+    const fontPath = path.join(assetsDir, "DB-Adman-X.ttf");
+    try {
+      const fontStats = await fs.stat(fontPath);
+      results.fontFile = { exists: true, path: fontPath, size: fontStats.size };
+    } catch (error) {
+      results.fontFile = { exists: false, path: fontPath, error: error.message };
+    }
+    
+    const bgPath = path.join(assetsDir, "background.png");
+    try {
+      const bgStats = await fs.stat(bgPath);
+      results.backgroundImage = { exists: true, path: bgPath, size: bgStats.size };
+    } catch (error) {
+      results.backgroundImage = { exists: false, path: bgPath, error: error.message };
+    }
+
+    return res.json({ workingDirectory: process.cwd(), assets: results });
+  } catch (error) {
+    return res.status(500).json({ error: "Asset debug failed", message: error.message });
+  }
+});
+
+// Debug endpoint: Test Placeholders
+app.post("/debug-placeholders", (req, res) => {
+  try {
+    const testData = req.body || {};
+    const tests = [
+      { name: "Badge Color", template: "{{ badge_color }}", expected: testData.badge_color || "MISSING" },
+      { name: "Border Color", template: "{{ border_color }}", expected: testData.border_color || "MISSING" },
+      { name: "Sales Name", template: "{{ sales_name }}", expected: testData.sales_name || "MISSING" }
+    ];
+    
+    const results = tests.map(test => ({
+      ...test,
+      resolved: resolvePlaceholders(test.template, testData),
+      success: resolvePlaceholders(test.template, testData) === test.expected
+    }));
+
+    return res.json({
+      receivedData: testData,
+      tests: results,
+      summary: {
+        totalTests: results.length,
+        passed: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "Placeholder debug failed", message: error.message });
+  }
+});
+
 // Preview endpoint that accepts custom template without saving
 app.post("/preview", async (req, res) => {
   try {
